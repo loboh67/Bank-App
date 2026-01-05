@@ -32,7 +32,8 @@ BankApp/DerivedData/
 BankApp/*.xcuserstate
 BankApp/*.xcuserdata
 BankApp/*.xcworkspace/xcuserdata
+**/xcuserdata/
+**/*.xcuserstate
 
 # Logs
 *.log
-
