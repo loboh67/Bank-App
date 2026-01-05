@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-service-config
+  namespace: dev
+data:
+  SERVER_PORT: "8080"
+  DATABASE_URL: jdbc:postgresql://host.docker.internal:5433/bank_db
+  DATABASE_USERNAME: henriquelobo
+  KAFKA_BOOTSTRAP_SERVERS: kafka-kafka-bootstrap.kafka.svc.cluster.local:9092
+  ENABLE_BANKING_GRPC_ADDRESS: static://enable-banking.dev.svc.cluster.local:9091
+  ENABLE_BANKING_GRPC_NEGOTIATION_TYPE: plaintext
+  KAFKA_CLIENT_ID: sync-service
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sync-service-secrets
+  namespace: dev
+type: Opaque
+stringData:
+  DATABASE_PASSWORD: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sync-service
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sync-service
+  template:
+    metadata:
+      labels:
+        app: sync-service
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: sync-service
+          image: sync-service:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: sync-service-config
+            - secretRef:
+                name: sync-service-secrets
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sync-service
+  namespace: dev
+spec:
+  selector:
+    app: sync-service
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sync-service
+  namespace: dev
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  tls:
+    - hosts:
+        - sync.dev.example.com
+      secretName: sync-service-tls
+  rules:
+    - host: sync.dev.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sync-service
+                port:
+                  number: 80

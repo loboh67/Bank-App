@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: sync-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/auth_service}
+    username: ${DATABASE_USERNAME:henriquelobo}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9095}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    properties:
+      spring.json.add.type.headers: false
+    client-id: ${KAFKA_CLIENT_ID:sync-service}
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+grpc:
+  client:
+    enable-banking-service:
+      address: ${ENABLE_BANKING_GRPC_ADDRESS:static://localhost:9091}
+      negotiationType: ${ENABLE_BANKING_GRPC_NEGOTIATION_TYPE:plaintext}
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true

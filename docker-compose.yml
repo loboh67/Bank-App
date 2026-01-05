@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lobo-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-auth_service}
+      POSTGRES_USER: ${POSTGRES_USER:-henriquelobo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Put your exported schema/data SQL files in ./db/init.
+      # They will run only on first init of an empty volume.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-henriquelobo} -d ${POSTGRES_DB:-auth_service}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth:
+    profiles: ["core"]
+    build:
+      context: ./auth
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-auth_service}
+      DB_USERNAME: ${POSTGRES_USER:-henriquelobo}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      HTTP_PORT: "8082"
+      GRPC_PORT: "9090"
+      JWT_SECRET: ${JWT_SECRET:-default-jwt-secret-should-be-32b-long!}
+    ports:
+      - "8082:8082"
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  enable-banking:
+    profiles: ["core"]
+    build:
+      context: ./enabel-banking-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-auth_service}
+      DB_USERNAME: ${POSTGRES_USER:-henriquelobo}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      SERVER_PORT: "8081"
+      GRPC_SERVER_PORT: "9091"
+      AUTH_SERVICE_GRPC_ADDRESS: static://auth:9090
+      AUTH_SERVICE_GRPC_NEGOTIATION: plaintext
+      ENABLEBANKING_PRIVATE_KEY_PATH: /etc/enablebanking/app.pem
+    volumes:
+      - ./enabel-banking-service/certs/app.pem:/etc/enablebanking/app.pem:ro
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth:
+        condition: service_started
+
+  api:
+    profiles: ["core"]
+    build:
+      context: ./api
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-auth_service}
+      DB_USERNAME: ${POSTGRES_USER:-henriquelobo}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      AUTH_SERVICE_ADDRESS: static://auth:9090
+      AUTH_SERVICE_NEGOTIATION: plaintext
+      AUTH_SERVICE_BASE_URL: http://auth:8082
+      ENABLE_BANKING_BASE_URL: http://enable-banking:8081
+      # Run sync separately (see docs); default points to localhost.
+      SYNC_SERVICE_BASE_URL: ${SYNC_SERVICE_BASE_URL:-http://localhost:8080}
+      SERVER_PORT: "8085"
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth:
+        condition: service_started
+      enable-banking:
+        condition: service_started
+
+volumes:
+  postgres_data:

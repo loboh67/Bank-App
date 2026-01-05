@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enable-banking-config
+  namespace: dev
+data:
+  SERVER_PORT: "8081"
+  GRPC_SERVER_PORT: "9091"
+  ENABLEBANKING_BASE_URL: "https://api.enablebanking.com"
+  ENABLEBANKING_AUDIENCE: "api.enablebanking.com"
+  ENABLEBANKING_REDIRECT_URL: "http://localhost:8081/enablebanking/auth/callback"
+  ENABLEBANKING_PRIVATE_KEY_PATH: "/etc/enablebanking/app.pem"
+  AUTH_SERVICE_GRPC_ADDRESS: "static://auth.dev.svc.cluster.local:9090"
+  AUTH_SERVICE_GRPC_NEGOTIATION: "plaintext"
+  DB_URL: "jdbc:postgresql://host.docker.internal:5433/bank_db"
+  LOG_LEVEL_ROOT: "INFO"
+  LOG_LEVEL_SPRING_WEB: "INFO"
+  LOG_LEVEL_APP: "DEBUG"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: enable-banking-secrets
+  namespace: dev
+type: Opaque
+stringData:
+  DB_USERNAME: "henriquelobo"
+  DB_PASSWORD: "postgres"
+  ENABLEBANKING_APP_ID: "4b2b4cac-5791-417c-98ae-aa5760ad5b3a"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enable-banking
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enable-banking
+  template:
+    metadata:
+      labels:
+        app: enable-banking
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: enable-banking
+          image: enable-banking:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8081
+            - name: grpc
+              containerPort: 9091
+          envFrom:
+            - configMapRef:
+                name: enable-banking-config
+            - secretRef:
+                name: enable-banking-secrets
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:ActiveProcessorCount=2 -XX:+UseContainerSupport"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: eb-private-key
+              mountPath: /etc/enablebanking
+              readOnly: true
+      volumes:
+        - name: eb-private-key
+          secret:
+            secretName: enablebanking-private-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enable-banking
+  namespace: dev
+spec:
+  selector:
+    app: enable-banking
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8081
+    - name: grpc
+      port: 9091
+      targetPort: 9091
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enable-banking
+  namespace: dev
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+spec:
+  rules:
+    - host: enable-banking.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: enable-banking
+                port:
+                  number: 80

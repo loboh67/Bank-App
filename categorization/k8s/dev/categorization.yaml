@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: categorization-config
+  namespace: dev
+data:
+  HEALTH_PORT: "8080"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  KAFKA_TOPIC: "transactions.upserted"
+  KAFKA_GROUP_ID: "categorizer-service"
+  # Prefer DATABASE_URL in production.
+  DB_HOST: "host.docker.internal"
+  DB_PORT: "5433"
+  DB_NAME: "bank_db"
+  DB_USER: "henriquelobo"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: categorization-secrets
+  namespace: dev
+type: Opaque
+stringData:
+  DB_PASSWORD: "postgres"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: categorization
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: categorization
+  template:
+    metadata:
+      labels:
+        app: categorization
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: categorization
+          image: categorization:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: health
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: categorization-config
+            - secretRef:
+                name: categorization-secrets
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

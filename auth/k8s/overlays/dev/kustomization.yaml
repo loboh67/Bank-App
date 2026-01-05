@@ -1,0 +1,14 @@
+namespace: dev
+
+resources:
+  - ../../base
+  - ingress.yaml
+
+patches:
+  - path: configmap-patch.yaml
+  - path: secret-patch.yaml
+
+images:
+  - name: auth
+    newName: auth
+    newTag: dev

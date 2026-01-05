@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: API-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5432/auth_service}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USERNAME:henriquelobo}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:}}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+    properties:
+      hibernate:
+        format_sql: ${HIBERNATE_FORMAT_SQL:true}
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  port: ${SERVER_PORT:8086}
+  shutdown: graceful
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+
+grpc:
+  client:
+    authService:
+      address: ${AUTH_SERVICE_ADDRESS:static://localhost:9090}
+      negotiationType: ${AUTH_SERVICE_NEGOTIATION:plaintext}
+services:
+  auth:
+    base-url: ${AUTH_SERVICE_BASE_URL:http://localhost:8082}
+  enable-banking:
+    base-url: ${ENABLE_BANKING_BASE_URL:http://localhost:8081}
+  sync:
+    base-url: ${SYNC_SERVICE_BASE_URL:http://localhost:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,mappings
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true

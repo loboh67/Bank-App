@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth_service}
+    username: ${DB_USERNAME:henriquelobo}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:default-jwt-secret-should-be-32b-long!}
+    expiration: ${JWT_EXPIRATION:3600}
+
+server:
+  port: ${HTTP_PORT:8082}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+grpc:
+  server:
+    port: ${GRPC_PORT:9090}

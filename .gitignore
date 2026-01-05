@@ -1,0 +1,38 @@
+# Env and secrets
+.env
+.env.local
+*.pem
+certs/
+**/certs/
+
+# OS/IDE/editor
+.DS_Store
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+
+# Build/output
+**/target/
+**/build/
+**/dist/
+**/.mvn/wrapper/maven-wrapper.jar
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+*.pyc
+
+# iOS/Xcode
+BankApp/DerivedData/
+BankApp/*.xcuserstate
+BankApp/*.xcuserdata
+BankApp/*.xcworkspace/xcuserdata
+
+# Logs
+*.log
+

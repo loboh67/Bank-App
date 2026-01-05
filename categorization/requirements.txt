@@ -1,0 +1,5 @@
+psycopg[binary]
+python-dotenv
+confluent-kafka
+psycopg-pool
+Unidecode

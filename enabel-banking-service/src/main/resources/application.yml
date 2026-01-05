@@ -1,0 +1,53 @@
+spring:
+  http:
+    codecs:
+      max-in-memory-size: 10MB
+  application:
+    name: Enable Banking Service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth_service}
+    username: ${DB_USERNAME:henriquelobo}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  port: ${SERVER_PORT:8081}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    org.springframework.web: ${LOG_LEVEL_SPRING_WEB:INFO}
+    com.lobosoft.enablebanking: ${LOG_LEVEL_APP:DEBUG}
+
+enablebanking:
+  app-id: ${ENABLEBANKING_APP_ID:4b2b4cac-5791-417c-98ae-aa5760ad5b3a}
+  private-key-path: ${ENABLEBANKING_PRIVATE_KEY_PATH:./certs/app.pem}
+  base-url: ${ENABLEBANKING_BASE_URL:https://api.enablebanking.com}
+  audience: ${ENABLEBANKING_AUDIENCE:api.enablebanking.com}
+  redirect-url: ${ENABLEBANKING_REDIRECT_URL:http://localhost:${SERVER_PORT:8081}/enablebanking/auth/callback}
+
+grpc:
+  client:
+    authService:
+      address: ${AUTH_SERVICE_GRPC_ADDRESS:static://localhost:9090}
+      negotiationType: ${AUTH_SERVICE_GRPC_NEGOTIATION:plaintext}
+  server:
+    port: ${GRPC_SERVER_PORT:9091}

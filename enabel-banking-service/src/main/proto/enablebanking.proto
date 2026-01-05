@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package enablebanking;
+
+option java_multiple_files = true;
+option java_package = "com.lobosoft.enablebanking.grpc";
+
+service EnableBankingGrpcService {
+    rpc GetAccountTransactions(GetAccountTransactionsRequest)
+        returns (GetAccountTransactionsResponse);
+}
+
+message GetAccountTransactionsRequest {
+  string provider_account_id = 1;
+  string from_date           = 2; // ISO-8601 date, ex: "2025-11-01"
+  string to_date             = 3; // ISO-8601 date
+  string continuation_key    = 4;
+}
+
+message Transaction {
+  string provider_transaction_id = 1; // transaction_id or entry_reference fallback
+  string entry_reference         = 2; // raw entry_reference from provider (optional but useful)
+  string amount                  = 3; // "0.00"
+  string currency                = 4; // "EUR"
+  string direction               = 5; // "DEBIT" / "CREDIT"
+  string booking_date            = 6; // "2025-12-04"
+  string value_date              = 7; // "2025-12-04"
+  string description             = 8; // "apple.com/bill"
+  string raw_json                = 9; // full provider JSON
+}
+
+message GetAccountTransactionsResponse {
+  repeated Transaction transactions = 1;
+  string continuation_key = 2;
+}
