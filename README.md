@@ -3,7 +3,7 @@
 A small banking stack with multiple Spring Boot services, a Python categorization service, and an iOS client. Local dev runs via docker-compose with Postgres.
 
 ## Services
-- `auth` – AuthN/AuthZ with JWT + gRPC.
+- `auth` – Auth with JWT + gRPC.
 - `enabel-banking-service` – EnableBanking integration + gRPC.
 - `api` – Public HTTP API gateway.
 - `sync` – Background sync service (Kafka-enabled).
